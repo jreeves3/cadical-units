@@ -8,3 +8,5 @@
 '''
 
 Units printed with format `c unit <unit> 0`
+
+Must enable proof tracing with a proof file argument.
