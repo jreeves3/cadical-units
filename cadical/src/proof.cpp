@@ -250,6 +250,33 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (proof_chain.empty ());
   assert (clause.empty ());
+  // printunits code
+  if (internal->opts.unitprint) {
+    bool print_unit = false;
+
+    if (!internal->unitprint_cnt && internal->stats.learned.clauses >= internal->opts.unitstart) {
+      // first unit to be printed
+      print_unit = true;
+    }
+
+    if (internal->unitprint_cnt && internal->stats.learned.clauses >= internal->unitprint_next) {
+      // next unit to be printed
+      print_unit = true;
+    }
+
+    if (print_unit) {
+      const int external_lit = internal->externalize (internal_unit);
+      printf("c unit %d 0\n",external_lit);
+
+      internal->unitprint_cnt++;
+      int unit_multiplier = (internal->opts.unitgapgrow > 1) ? internal->unitprint_cnt * internal->opts.unitgapgrow : 1;
+      internal->unitprint_next = internal->stats.learned.clauses + internal->opts.unitgap * unit_multiplier;
+    }
+    
+
+  }
+
+
   add_literal (internal_unit);
   for (const auto &cid : chain)
     proof_chain.push_back (cid);

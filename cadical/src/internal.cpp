@@ -21,7 +21,7 @@ Internal::Internal ()
       propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
       marked_failed (true), num_assigned (0), proof (0), lratbuilder (0),
-      opts (this),
+      opts (this), unitprint_cnt(0), unitprint_next(0),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif

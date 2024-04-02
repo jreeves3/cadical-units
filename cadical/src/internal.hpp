@@ -264,6 +264,10 @@ struct Internal {
   vector<StatTracer *> stat_tracers; // checkers
 
   Options opts; // run-time options
+
+  int64_t unitprint_cnt;
+  int64_t unitprint_next;
+
   Stats stats;  // statistics
 #ifndef QUIET
   Profiles profiles;         // time profiles for various functions
