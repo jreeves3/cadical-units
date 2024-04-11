@@ -250,7 +250,8 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (proof_chain.empty ());
   assert (clause.empty ());
-  // printunits code
+
+  // START printunits code
   if (internal->opts.unitprint) {
     bool print_unit = false;
 
@@ -260,21 +261,28 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
     }
 
     if (internal->unitprint_cnt && internal->stats.learned.clauses >= internal->unitprint_next) {
-      // next unit to be printed
+      // first unit after gap (from previous printed unit) to be printed
       print_unit = true;
     }
 
     if (print_unit) {
+      // write unit
       const int external_lit = internal->externalize (internal_unit);
       printf("c unit %d 0\n",external_lit);
 
+      // update counters and when to print next unit
       internal->unitprint_cnt++;
       int unit_multiplier = (internal->opts.unitgapgrow > 1) ? internal->unitprint_cnt * internal->opts.unitgapgrow : 1;
       internal->unitprint_next = internal->stats.learned.clauses + internal->opts.unitgap * unit_multiplier;
     }
-    
 
-  }
+    if (internal->opts.unitcount <= internal->unitprint_cnt) {
+      // stop printing units
+      fflush(stdout);
+      exit (1);
+    }
+  } 
+  // END printunits code
 
 
   add_literal (internal_unit);
