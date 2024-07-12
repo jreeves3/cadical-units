@@ -267,6 +267,7 @@ struct Internal {
 
   int64_t unitprint_cnt;
   int64_t unitprint_next;
+  vector<std::unordered_set<int>> cone_data;
 
   Stats stats;  // statistics
 #ifndef QUIET

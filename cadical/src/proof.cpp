@@ -252,7 +252,7 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
   assert (clause.empty ());
 
   // START printunits code
-  if (internal->opts.unitprint) {
+  if (internal->opts.unitprint && !internal->opts.unitcone) {
     bool print_unit = false;
 
     if (!internal->unitprint_cnt && internal->stats.learned.clauses >= internal->opts.unitstart) {
@@ -551,6 +551,51 @@ void Proof::add_derived_clause () {
   for (auto &tracer : tracers) {
     tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
   }
+
+  // start cone code
+  if (internal->cone_data.empty()) {
+    internal->cone_data = vector<unordered_set<int>>(clause_id - 1);
+    for (int i = 0; i < clause_id - 1; i++) {
+      internal->cone_data[i] = {i};
+    }
+  }
+  
+  int count = 0;
+  for (auto &s : internal->cone_data) {
+    for (auto &c : proof_chain) {
+      if (s.count(c)) {
+        s.insert(clause_id);
+        count += 1;
+        break;
+      }
+    }
+  }
+  if (internal->opts.unitprint && internal->opts.unitcone) {
+    if (clause.size() == 1 && count >= internal->opts.unitconesize) {
+      if (internal->opts.unitconeprintsize) {
+        printf("c %d 0 # %d\n", clause[0], count);
+      } else {
+        printf("c %d 0\n", clause[0]);
+      }
+      internal->unitprint_cnt += 1;
+      if (internal->unitprint_cnt >= internal->opts.unitcount) {
+        fflush(stdout);
+        exit(1);
+      }
+    }
+  }
+  // int foo = 0;
+  // for (auto &s : internal->cone_data) {
+  //   printf("%d {", foo);
+  //   for (auto &x : s) {
+  //     printf("%d,", x);
+  //   }
+  //   printf("}\n");
+  //   foo += 1;
+  // }
+
+
+  // end cone code
   proof_chain.clear ();
   clause.clear ();
   clause_id = 0;
