@@ -1,0 +1,6 @@
+-Wall
+-std=c++11
+-L/usr/local/lib
+-I/usr/local/include
+-lfmt
+
