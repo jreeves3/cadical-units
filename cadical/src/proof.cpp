@@ -255,12 +255,14 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
   if (internal->opts.unitprint && !internal->opts.unitcone) {
     bool print_unit = false;
 
-    if (!internal->unitprint_cnt && internal->stats.learned.clauses >= internal->opts.unitstart) {
+    if (!internal->unitprint_cnt &&
+        internal->stats.learned.clauses >= internal->opts.unitstart) {
       // first unit to be printed
       print_unit = true;
     }
 
-    if (internal->unitprint_cnt && internal->stats.learned.clauses >= internal->unitprint_next) {
+    if (internal->unitprint_cnt &&
+        internal->stats.learned.clauses >= internal->unitprint_next) {
       // first unit after gap (from previous printed unit) to be printed
       print_unit = true;
     }
@@ -268,22 +270,25 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
     if (print_unit) {
       // write unit
       const int external_lit = internal->externalize (internal_unit);
-      printf("c unit %d 0\n",external_lit);
+      printf ("c unit %d 0\n", external_lit);
 
       // update counters and when to print next unit
       internal->unitprint_cnt++;
-      int unit_multiplier = (internal->opts.unitgapgrow > 1) ? internal->unitprint_cnt * internal->opts.unitgapgrow : 1;
-      internal->unitprint_next = internal->stats.learned.clauses + internal->opts.unitgap * unit_multiplier;
+      int unit_multiplier =
+          (internal->opts.unitgapgrow > 1)
+              ? internal->unitprint_cnt * internal->opts.unitgapgrow
+              : 1;
+      internal->unitprint_next = internal->stats.learned.clauses +
+                                 internal->opts.unitgap * unit_multiplier;
     }
 
     if (internal->opts.unitcount <= internal->unitprint_cnt) {
       // stop printing units
-      fflush(stdout);
+      fflush (stdout);
       exit (1);
     }
-  } 
+  }
   // END printunits code
-
 
   add_literal (internal_unit);
   for (const auto &cid : chain)
@@ -553,34 +558,34 @@ void Proof::add_derived_clause () {
   }
 
   // start cone code
-  if (internal->cone_data.empty()) {
-    internal->cone_data = vector<unordered_set<int>>(clause_id - 1);
-    for (int i = 0; i < clause_id - 1; i++) {
+  if (internal->cone_data.empty ()) {
+    internal->cone_data = vector<unordered_set<int>> (clause_id - 1);
+    for (int i = 0; (uint64_t) i < clause_id - 1; i++) {
       internal->cone_data[i] = {i};
     }
   }
-  
+
   int count = 0;
   for (auto &s : internal->cone_data) {
     for (auto &c : proof_chain) {
-      if (s.count(c)) {
-        s.insert(clause_id);
+      if (s.count (c)) {
+        s.insert (clause_id);
         count += 1;
         break;
       }
     }
   }
   if (internal->opts.unitprint && internal->opts.unitcone) {
-    if (clause.size() == 1 && count >= internal->opts.unitconesize) {
+    if (clause.size () == 1 && count >= internal->opts.unitconesize) {
       if (internal->opts.unitconeprintsize) {
-        printf("c %d 0 # %d\n", clause[0], count);
+        printf ("c %d 0 # %d\n", clause[0], count);
       } else {
-        printf("c %d 0\n", clause[0]);
+        printf ("c %d 0\n", clause[0]);
       }
       internal->unitprint_cnt += 1;
       if (internal->unitprint_cnt >= internal->opts.unitcount) {
-        fflush(stdout);
-        exit(1);
+        fflush (stdout);
+        exit (1);
       }
     }
   }
@@ -593,7 +598,6 @@ void Proof::add_derived_clause () {
   //   printf("}\n");
   //   foo += 1;
   // }
-
 
   // end cone code
   proof_chain.clear ();
