@@ -558,13 +558,13 @@ void Proof::add_derived_clause () {
   }
 
   // start cone code
+  auto start = std::chrono::high_resolution_clock::now();
   if (internal->cone_data.empty ()) {
     internal->cone_data = vector<unordered_set<int>> (clause_id - 1);
     for (int i = 0; (uint64_t) i < clause_id - 1; i++) {
       internal->cone_data[i] = {i};
     }
   }
-
   int count = 0;
   for (auto &s : internal->cone_data) {
     for (auto &c : proof_chain) {
@@ -589,6 +589,9 @@ void Proof::add_derived_clause () {
       }
     }
   }
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end - start;
+  printf("%f\n", duration.count());
   // int foo = 0;
   // for (auto &s : internal->cone_data) {
   //   printf("%d {", foo);

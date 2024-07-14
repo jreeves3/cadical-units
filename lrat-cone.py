@@ -1,23 +1,63 @@
-import sys
-from time import sleep
+from dataclasses import dataclass
+from functools import cache
+import argparse
 
-f = open(sys.argv[1], "r")
-lines = f.readlines()
-weights = {}
 
-for i, line in enumerate(lines):
+@dataclass
+class LratLine:
+    clause_id: int
+    lits: list[int]
+    deps: list[int]
+
+
+def parse_lrat_line(line):
     cid = int(line.split(" ")[0])
-    cid_weight = 0
-    for id in line.split(" 0 ")[-1].split(" ")[:-1]:
-        if id == "d":
-            continue
-        id = int(id)
-        if id in weights:
-            cid_weight += weights[id]
-        else:
-            cid_weight += 1
-    weights[cid] = cid_weight
+    frags = line.split(" 0 ")
+    lits = list(map(int, frags[0].split(" ")[1:]))
+    deps = list(map(int, frags[1].split(" ")[:-1]))
+    return LratLine(cid, lits, deps)
 
-    if cid_weight > 2 ** 64:
-        print(i, cid_weight)
-        sys.exit(1)
+
+@cache
+def get_deps(cid):
+    if cid < num_base_clauses:
+        s = set()
+        s.add(cid)
+        return s
+    else:
+        s = set()
+        for dcid in lrat_lines[cid]:
+            s = s.union(get_deps(dcid))
+        return s
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lrat", dest="lrat", required=True)
+    parser.add_argument("--learned-gap", dest="lgap", type=int, default=0)
+    parser.add_argument("--unit-gap", dest="ugap", type=int, default=0)
+    parser.add_argument("--cone-size", dest="csize", type=int, default=0)
+    args = parser.parse_args()
+
+    f = open(args.lrat, "r")
+    lines = f.readlines()
+    num_base_clauses = int(lines[0].split(" ")[0])
+    lrat_lines = {}
+    last_printed = 0
+    units_seen_since_last_print = 0
+
+    for i, line in enumerate(lines):
+        if "d" in line:
+            continue
+        lrat_line = parse_lrat_line(line)
+        lrat_lines[lrat_line.clause_id] = lrat_line.deps
+
+        if len(lrat_line.lits) != 1:
+            continue
+        else:
+            cone_size = len(get_deps(lrat_line.clause_id))
+            units_seen_since_last_print += 1
+            if cone_size >= args.csize and i - last_printed >= args.lgap and units_seen_since_last_print >= args.ugap:
+                print("c {} 0".format(lrat_line.lits[0]))
+                units_seen_since_last_print = 0
+                last_printed = i
