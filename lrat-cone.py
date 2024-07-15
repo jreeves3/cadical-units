@@ -36,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--lrat", dest="lrat", required=True)
     parser.add_argument("--learned-gap", dest="lgap", type=int, default=0)
     parser.add_argument("--unit-gap", dest="ugap", type=int, default=0)
+    parser.add_argument("--unit-count", dest="ucount", type=int, default=1)
     parser.add_argument("--cone-size", dest="csize", type=int, default=0)
     args = parser.parse_args()
 
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     num_base_clauses = int(lines[0].split(" ")[0])
     lrat_lines = {}
     last_printed = 0
+    units_printed = 0
     units_seen_since_last_print = 0
 
     for i, line in enumerate(lines):
@@ -58,6 +60,9 @@ if __name__ == "__main__":
             cone_size = len(get_deps(lrat_line.clause_id))
             units_seen_since_last_print += 1
             if cone_size >= args.csize and i - last_printed >= args.lgap and units_seen_since_last_print >= args.ugap:
-                print("c {} 0".format(lrat_line.lits[0]))
+                print("c {} 0 {}".format(lrat_line.lits[0], cone_size))
                 units_seen_since_last_print = 0
                 last_printed = i
+                units_printed += 1
+                if units_printed >= args.ucount:
+                    exit(0)
