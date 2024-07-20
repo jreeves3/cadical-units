@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from functools import cache
+from functools import lru_cache
 import argparse
 
 
@@ -18,7 +18,7 @@ def parse_lrat_line(line):
     return LratLine(cid, lits, deps)
 
 
-@cache
+@lru_cache(maxsize = 10000)
 def get_deps(cid):
     if cid < num_base_clauses:
         s = set()
@@ -47,6 +47,7 @@ if __name__ == "__main__":
     last_printed = 0
     units_printed = 0
     units_seen_since_last_print = 0
+    proof_steps_since_last_print = 0
 
     for i, line in enumerate(lines):
         if "d" in line:
@@ -54,14 +55,16 @@ if __name__ == "__main__":
         lrat_line = parse_lrat_line(line)
         lrat_lines[lrat_line.clause_id] = lrat_line.deps
 
+        proof_steps_since_last_print += 1
         if len(lrat_line.lits) != 1:
             continue
         else:
             cone_size = len(get_deps(lrat_line.clause_id))
             units_seen_since_last_print += 1
             if cone_size >= args.csize and i - last_printed >= args.lgap and units_seen_since_last_print >= args.ugap:
-                print("c {} 0 {}".format(lrat_line.lits[0], cone_size))
+                print("unit: {}, cone size: {}, proof steps since previous print: {}".format(lrat_line.lits[0], cone_size, proof_steps_since_last_print))
                 units_seen_since_last_print = 0
+                proof_steps_since_last_print = 0
                 last_printed = i
                 units_printed += 1
                 if units_printed >= args.ucount:
