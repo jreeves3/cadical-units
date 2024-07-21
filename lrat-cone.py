@@ -1,7 +1,11 @@
 from dataclasses import dataclass
+from tqdm import tqdm
 from functools import lru_cache
+import sys
 import argparse
 
+calls = 0
+cache = {}
 
 @dataclass
 class LratLine:
@@ -17,9 +21,8 @@ def parse_lrat_line(line):
     deps = list(map(int, frags[1].split(" ")[:-1]))
     return LratLine(cid, lits, deps)
 
-
-@lru_cache(maxsize = 10000)
-def get_deps(cid):
+@lru_cache()
+def get_deps_ref(cid):
     if cid < num_base_clauses:
         s = set()
         s.add(cid)
@@ -27,11 +30,34 @@ def get_deps(cid):
     else:
         s = set()
         for dcid in lrat_lines[cid]:
-            s = s.union(get_deps(dcid))
+            s = s.union(get_deps_ref(dcid))
         return s
+
+def get_deps(cid):
+    to_visit = set()
+    seen = set()
+    for dcid in lrat_lines[cid]:
+        to_visit.add(dcid)
+    res = set()
+    while len(to_visit) != 0:
+        current = to_visit.pop()
+        if current < num_base_clauses:
+            res.add(current)
+        elif current in cache:
+            res = res.union(cache[current])
+        else:
+            for ddcid in lrat_lines[current]:
+                if ddcid not in seen:
+                    to_visit.add(ddcid)
+                    seen.add(ddcid)
+    cache[cid] = res
+    return res
+
+            
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--lrat", dest="lrat", required=True)
     parser.add_argument("--learned-gap", dest="lgap", type=int, default=0)
@@ -49,7 +75,7 @@ if __name__ == "__main__":
     units_seen_since_last_print = 0
     proof_steps_since_last_print = 0
 
-    for i, line in enumerate(lines):
+    for i, line in enumerate(tqdm(lines)):
         if "d" in line:
             continue
         lrat_line = parse_lrat_line(line)
@@ -59,9 +85,10 @@ if __name__ == "__main__":
         if len(lrat_line.lits) != 1:
             continue
         else:
+            calls = 0
             cone_size = len(get_deps(lrat_line.clause_id))
             units_seen_since_last_print += 1
-            if cone_size >= args.csize and i - last_printed >= args.lgap and units_seen_since_last_print >= args.ugap:
+            if len(lrat_line.lits) == 1 and cone_size >= args.csize and i - last_printed >= args.lgap and units_seen_since_last_print >= args.ugap:
                 print("unit: {}, cone size: {}, proof steps since previous print: {}".format(lrat_line.lits[0], cone_size, proof_steps_since_last_print))
                 units_seen_since_last_print = 0
                 proof_steps_since_last_print = 0
