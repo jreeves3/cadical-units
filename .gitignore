@@ -74,4 +74,4 @@ dkms.conf
 venv/
 target/
 compile_commands.json
-/.cache
+.cache/
