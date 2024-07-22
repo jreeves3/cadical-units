@@ -25,13 +25,14 @@ struct Global {
 struct Args {
     #[arg(short, long)]
     lrat: String,
-
     #[arg(long, default_value_t = 0)]
-    learned_gap: u32,
+    learned_gap: usize,
     #[arg(short, long, default_value_t = 1)]
-    unit_count: u32,
+    unit_count: usize,
+    #[arg(long, default_value_t = 0)]
+    unit_gap: usize,
     #[arg(short, long, default_value_t = 0)]
-    cone_size: u32,
+    cone_size: usize,
 }
 
 fn parse_lrat_line(line: &str) -> LratLine {
@@ -61,8 +62,7 @@ fn cache_deps(data: &mut Global, cid: Cid) {
         seen.insert(*dcid);
     }
     let mut res: HashSet<Cid> = HashSet::new();
-    while !to_visit.is_empty() {
-        let current_cid = to_visit.pop().unwrap();
+    while let Some(current_cid) = to_visit.pop() {
         if current_cid <= data.base_clauses {
             res.insert(current_cid);
         } else {
@@ -116,22 +116,37 @@ fn main() {
         lines: HashMap::new(),
         cache: HashMap::new(),
     };
+    let mut units_printed = 0;
+    let mut units_seen_since_last_print = 0;
+    let mut proof_steps_since_last_print = 0;
     for line in lines {
         let line = line.unwrap();
         if line.contains("d") {
             continue;
         }
+        proof_steps_since_last_print += 1;
         let lrat_line = parse_lrat_line(&line);
-        //println!("{:?}", lrat_line);
         glbl.lines.insert(lrat_line.clause_id, lrat_line.deps);
         if lrat_line.lits.len() != 1 {
             continue;
         }
+        units_seen_since_last_print += 1;
         cache_deps(&mut glbl, lrat_line.clause_id);
         let cone_size = glbl.cache[&lrat_line.clause_id].len();
-        println!(
-            "{}, {}, {cone_size}",
-            lrat_line.clause_id, lrat_line.lits[0]
-        );
+        if cone_size >= args.cone_size
+            && proof_steps_since_last_print >= args.learned_gap
+            && units_seen_since_last_print >= args.unit_gap
+        {
+            units_printed += 1;
+            units_seen_since_last_print = 0;
+            proof_steps_since_last_print = 0;
+            println!(
+                "{}, {}, {cone_size}",
+                lrat_line.clause_id, lrat_line.lits[0]
+            );
+            if units_printed >= args.unit_count {
+                std::process::exit(0);
+            }
+        }
     }
 }
