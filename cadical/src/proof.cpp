@@ -558,49 +558,60 @@ void Proof::add_derived_clause () {
   }
 
   // start cone code
-  auto start = std::chrono::high_resolution_clock::now();
-  if (internal->cone_data.empty ()) {
-    internal->cone_data = vector<unordered_set<int>> (clause_id - 1);
-    for (int i = 0; (uint64_t) i < clause_id - 1; i++) {
-      internal->cone_data[i] = {i};
-    }
-  }
-  int count = 0;
-  for (auto &s : internal->cone_data) {
-    for (auto &c : proof_chain) {
-      if (s.count (c)) {
-        s.insert (clause_id);
-        count += 1;
-        break;
-      }
-    }
-  }
   if (internal->opts.unitprint && internal->opts.unitcone) {
-    if (clause.size () == 1 && count >= internal->opts.unitconesize) {
-      if (internal->opts.unitconeprintsize) {
-        printf ("c %d 0 # %d\n", clause[0], count);
-      } else {
-        printf ("c %d 0\n", clause[0]);
+    assert (internal->lrat);
+    vector<uint64_t> proof_chain_copy = proof_chain;
+    internal->cone_data_lines.insert ({clause_id, proof_chain_copy});
+    if (clause.size () == 1) {
+      vector<uint64_t> *to_visit = new vector<uint64_t>;
+      unordered_set<uint64_t> *seen = new unordered_set<uint64_t>;
+      for (auto dcid : internal->cone_data_lines[clause_id]) {
+        to_visit->push_back (dcid);
+        seen->insert (dcid);
       }
-      internal->unitprint_cnt += 1;
-      if (internal->unitprint_cnt >= internal->opts.unitcount) {
-        fflush (stdout);
-        exit (1);
+      unordered_set<uint64_t> *result = new unordered_set<uint64_t>;
+      while (!to_visit->empty ()) {
+        uint64_t current_cid = to_visit->back ();
+        to_visit->pop_back ();
+        if (current_cid < internal->original_id) {
+          result->insert (current_cid);
+        } else if (internal->cone_data_cache.count (current_cid)) {
+          // printf("Cache hit\n");
+          for (auto ddcid : *internal->cone_data_cache[current_cid]) {
+            result->insert (ddcid);
+          }
+        } else {
+          // printf("Cache miss\n");
+          // for (auto &elem : internal->cone_data_cache) {
+          //     printf("{%lu, ", elem.first);
+          //     for (auto &elemn : *elem.second) {
+          //         printf("%lu,", elemn);
+          //     }
+          //     printf("}");
+          // }
+          for (auto ddcid : internal->cone_data_lines[current_cid]) {
+            if (!seen->count (ddcid)) {
+              to_visit->push_back (ddcid);
+              seen->insert (ddcid);
+            }
+          }
+        }
+      }
+      delete to_visit;
+      delete seen;
+      int cone_size = result->size ();
+      internal->cone_data_cache.insert ({clause_id, result});
+      if (internal->opts.unitcone &&
+          cone_size > internal->opts.unitconesize) {
+        internal->unitprint_cnt += 1;
+        if (internal->opts.unitconeprintsize) {
+          printf ("c %d 0 # %d\n", clause[0], cone_size);
+        } else {
+          printf ("c %d 0\n", clause[0]);
+        }
       }
     }
   }
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> duration = end - start;
-  printf("%f\n", duration.count());
-  // int foo = 0;
-  // for (auto &s : internal->cone_data) {
-  //   printf("%d {", foo);
-  //   for (auto &x : s) {
-  //     printf("%d,", x);
-  //   }
-  //   printf("}\n");
-  //   foo += 1;
-  // }
 
   // end cone code
   proof_chain.clear ();

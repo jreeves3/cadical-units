@@ -73,3 +73,5 @@ dkms.conf
 *.lrat
 venv/
 target/
+compile_commands.json
+/.cache
