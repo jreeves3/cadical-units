@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Result};
+use std::io::{BufRead, BufReader};
 
 type Literal = i32;
 type Cid = u32;
@@ -20,7 +20,8 @@ struct Global {
     cache: HashMap<Cid, HashSet<Cid>>,
 }
 
-#[derive(Parser, Debug)] #[command(version, about, long_about = None)]
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long)]
     lrat: String,
@@ -83,6 +84,8 @@ fn cache_deps(data: &mut Global, cid: Cid) {
     data.cache.insert(cid, res);
 }
 
+#[allow(dead_code)]
+// reference implementation
 fn cache_deps_rec(data: &mut Global, cid: Cid) {
     if cid <= data.base_clauses {
         let mut s = HashSet::new();
@@ -100,9 +103,9 @@ fn cache_deps_rec(data: &mut Global, cid: Cid) {
     }
 }
 
-fn main() -> std::io::Result<()> {
+fn main() {
     let args = Args::parse();
-    let f = File::open(args.lrat)?;
+    let f = File::open(args.lrat).unwrap();
     let reader = BufReader::new(f);
     let mut lines = reader.lines();
     let first_line = lines.next().unwrap().unwrap();
@@ -114,7 +117,7 @@ fn main() -> std::io::Result<()> {
         cache: HashMap::new(),
     };
     for line in lines {
-        let line = line?;
+        let line = line.unwrap();
         if line.contains("d") {
             continue;
         }
@@ -126,7 +129,9 @@ fn main() -> std::io::Result<()> {
         }
         cache_deps(&mut glbl, lrat_line.clause_id);
         let cone_size = glbl.cache[&lrat_line.clause_id].len();
-        println!("{}, {}, {cone_size}", lrat_line.clause_id, lrat_line.lits[0]);
+        println!(
+            "{}, {}, {cone_size}",
+            lrat_line.clause_id, lrat_line.lits[0]
+        );
     }
-    Ok(())
 }
