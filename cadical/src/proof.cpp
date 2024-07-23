@@ -252,15 +252,17 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
   assert (clause.empty ());
 
   // START printunits code
-  if (internal->opts.unitprint) {
+  if (internal->opts.unitprint && !internal->opts.unitcone) {
     bool print_unit = false;
 
-    if (!internal->unitprint_cnt && internal->stats.learned.clauses >= internal->opts.unitstart) {
+    if (!internal->unitprint_cnt &&
+        internal->stats.learned.clauses >= internal->opts.unitstart) {
       // first unit to be printed
       print_unit = true;
     }
 
-    if (internal->unitprint_cnt && internal->stats.learned.clauses >= internal->unitprint_next) {
+    if (internal->unitprint_cnt &&
+        internal->stats.learned.clauses >= internal->unitprint_next) {
       // first unit after gap (from previous printed unit) to be printed
       print_unit = true;
     }
@@ -268,22 +270,25 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit,
     if (print_unit) {
       // write unit
       const int external_lit = internal->externalize (internal_unit);
-      printf("c unit %d 0\n",external_lit);
+      printf ("c unit %d 0\n", external_lit);
 
       // update counters and when to print next unit
       internal->unitprint_cnt++;
-      int unit_multiplier = (internal->opts.unitgapgrow > 1) ? internal->unitprint_cnt * internal->opts.unitgapgrow : 1;
-      internal->unitprint_next = internal->stats.learned.clauses + internal->opts.unitgap * unit_multiplier;
+      int unit_multiplier =
+          (internal->opts.unitgapgrow > 1)
+              ? internal->unitprint_cnt * internal->opts.unitgapgrow
+              : 1;
+      internal->unitprint_next = internal->stats.learned.clauses +
+                                 internal->opts.unitgap * unit_multiplier;
     }
 
     if (internal->opts.unitcount <= internal->unitprint_cnt) {
       // stop printing units
-      fflush(stdout);
+      fflush (stdout);
       exit (1);
     }
-  } 
+  }
   // END printunits code
-
 
   add_literal (internal_unit);
   for (const auto &cid : chain)
@@ -551,6 +556,64 @@ void Proof::add_derived_clause () {
   for (auto &tracer : tracers) {
     tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
   }
+
+  // start cone code
+  if (internal->opts.unitprint && internal->opts.unitcone) {
+    assert (internal->lrat);
+    vector<uint64_t> proof_chain_copy = proof_chain;
+    internal->cone_data_lines.insert ({clause_id, proof_chain_copy});
+    if (clause.size () == 1) {
+      vector<uint64_t> *to_visit = new vector<uint64_t>;
+      unordered_set<uint64_t> *seen = new unordered_set<uint64_t>;
+      for (auto dcid : internal->cone_data_lines[clause_id]) {
+        to_visit->push_back (dcid);
+        seen->insert (dcid);
+      }
+      unordered_set<uint64_t> *result = new unordered_set<uint64_t>;
+      while (!to_visit->empty ()) {
+        uint64_t current_cid = to_visit->back ();
+        to_visit->pop_back ();
+        if (current_cid < internal->original_id) {
+          result->insert (current_cid);
+        } else if (internal->cone_data_cache.count (current_cid)) {
+          // printf("Cache hit\n");
+          for (auto ddcid : *internal->cone_data_cache[current_cid]) {
+            result->insert (ddcid);
+          }
+        } else {
+          // printf("Cache miss\n");
+          // for (auto &elem : internal->cone_data_cache) {
+          //     printf("{%lu, ", elem.first);
+          //     for (auto &elemn : *elem.second) {
+          //         printf("%lu,", elemn);
+          //     }
+          //     printf("}");
+          // }
+          for (auto ddcid : internal->cone_data_lines[current_cid]) {
+            if (!seen->count (ddcid)) {
+              to_visit->push_back (ddcid);
+              seen->insert (ddcid);
+            }
+          }
+        }
+      }
+      delete to_visit;
+      delete seen;
+      int cone_size = result->size ();
+      internal->cone_data_cache.insert ({clause_id, result});
+      if (internal->opts.unitcone &&
+          cone_size > internal->opts.unitconesize) {
+        internal->unitprint_cnt += 1;
+        if (internal->opts.unitconeprintsize) {
+          printf ("c %d 0 # %d\n", clause[0], cone_size);
+        } else {
+          printf ("c %d 0\n", clause[0]);
+        }
+      }
+    }
+  }
+
+  // end cone code
   proof_chain.clear ();
   clause.clear ();
   clause_id = 0;

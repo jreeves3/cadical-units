@@ -183,6 +183,9 @@ OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,  1e6,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( transredreleff,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( unitcone,          0,  0,  1,0,0,0, "Whether to print units based on an LRAT cone") \
+OPTION( unitconeprintsize, 0,  0,  1,0,0,0, "Whether to print the size of the cone alone with the unit") \
+OPTION( unitconesize,     20,  0,2e9,0,0,0, "Size a unit cone needs to be before printing") \
 OPTION( unitcount,         1,  1,2e9,0,0,0, "number of units before exiting") \
 OPTION( unitgap,         1e2,  0,2e9,0,0,0, "number of learned clauses between printed units") \
 OPTION( unitgapgrow,       1,  1,2e9,0,0,0, "multiplier for gap after each printed unit") \

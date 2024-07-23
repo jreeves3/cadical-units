@@ -69,3 +69,9 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# misc
+*.lrat
+venv/
+target/
+compile_commands.json
+.cache/

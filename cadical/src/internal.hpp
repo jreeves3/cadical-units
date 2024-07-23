@@ -267,6 +267,8 @@ struct Internal {
 
   int64_t unitprint_cnt;
   int64_t unitprint_next;
+  std::unordered_map<uint64_t, std::unordered_set<uint64_t>*> cone_data_cache;
+  std::unordered_map<uint64_t, vector<uint64_t>> cone_data_lines;
 
   Stats stats;  // statistics
 #ifndef QUIET
